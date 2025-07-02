@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>DNS Watchtower</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-white font-mono">
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4 text-lime-400">DNS Sniffer Dashboard</h1>
+
+    <form action="/clear" method="POST" onsubmit="return confirm('Are you sure you want to wipe all logs?')">
+      <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mb-4">
+        Clear All Logs
+      </button>
+    </form>
+
+    <table class="table-auto w-full border border-gray-700">
+      <thead class="bg-gray-800 text-lime-300">
+        <tr>
+          <th class="px-4 py-2 text-left">🕒 Timestamp</th>
+          <th class="px-4 py-2 text-left">📍 IP Address</th>
+          <th class="px-4 py-2 text-left">🌐 Domain</th>
+        </tr>
+      </thead>
+      <tbody id="log-table">
+        {% for row in rows %}
+        <tr class="border-b border-gray-700 hover:bg-gray-800">
+          <td class="px-4 py-2">{{ row[0] }}</td>
+          <td class="px-4 py-2 text-blue-300">{{ row[1] }}</td>
+          <td class="px-4 py-2 text-pink-300">{{ row[2] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <p class="text-gray-500 text-sm mt-4">Showing latest {{ rows|length }} logs</p>
+  </div>
+
+  <!-- 🔄 Live Refresh Script -->
+  <script>
+    async function fetchLogs() {
+      try {
+        const res = await fetch('/api/logs');
+        const data = await res.json();
+
+        const tbody = document.getElementById('log-table');
+        tbody.innerHTML = "";
+
+        data.forEach(row => {
+          const tr = document.createElement("tr");
+
+          // If it's a sus domain, make it red & pulse
+          const trClass = row.is_sus
+            ? "bg-red-900 text-red-400 font-bold animate-pulse"
+            : "border-b border-gray-700 hover:bg-gray-800";
+
+          const domainClass = row.is_sus
+            ? "px-4 py-2 text-red-300"
+            : "px-4 py-2 text-pink-300";
+
+          tr.className = trClass;
+          tr.innerHTML = `
+            <td class="px-4 py-2">${row.timestamp}</td>
+            <td class="px-4 py-2 text-blue-300">${row.ip}</td>
+            <td class="${domainClass}">${row.domain}</td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("❌ Failed to fetch logs:", err);
+      }
+    }
+
+    // Refresh every 5 seconds
+    setInterval(fetchLogs, 5000);
+  </script>
+</body>
+
+</html>
+
